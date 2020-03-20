@@ -1,8 +1,26 @@
+#include<stdio.h>
+
+
 char* protocol(char* message, int op, int shift, int checksum);
 unsigned short checksum(const char *buf, unsigned size);
 
 int main(int argc, char **argv) {
-    
+    if (argc != 9) {
+	return 0;
+    }
+    char* ip = argv[2];
+    int port = atoi(argv[4]);
+    int op = atoi(argv[6]);
+    int n = atoi(argv[8]);
+    printf(ip);
+    printf(" ");
+    printf("%d", port);
+    printf(" ");
+    printf("%d", op);
+    printf(" ");
+    printf("%d", n);
+    printf("\n");
+
     return 0;
 }
 
