@@ -2,9 +2,18 @@
 #include<string.h>
 #include<sys/socket.h>
 #include<arpa/inet.h>
-char* protocol(char* message, int op, int shift, int checksum);
+#include<stdlib.h>
 unsigned short checksum(const char *buf, unsigned size);
 char* extract_argument(char** argv, int argc, char* arg);
+
+typedef struct MESSAGE{
+    short op;
+    short shift;
+    unsigned short checksum;
+    unsigned long long length;
+    char* data;
+} Message;
+
 
 int main(int argc, char **argv) {
     struct sockaddr_in serv_addr;
@@ -19,6 +28,10 @@ int main(int argc, char **argv) {
     int op = atoi(extract_argument(argv, argc, "-o"));
     //int n = atoi(argv[8]);
     int n = atoi(extract_argument(argv, argc, "-s"));
+    if (n < 0) {
+	n = n%26;
+	n = 26 + n;
+    }
     printf(ip);
     printf(" ");
     printf("%d", port);
@@ -27,29 +40,64 @@ int main(int argc, char **argv) {
     printf(" ");
     printf("%d", n);
     printf("\n");
+
+    short op1 = (short) op;
+    short n1 = (short) n;
+    
+
+    
     memset(&serv_addr, '0', sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
     inet_pton(AF_INET, ip, &serv_addr.sin_addr);
     int clientfd = socket(AF_INET, SOCK_STREAM,0);
     connect(clientfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-    //ssize_t send(int socket, const void *buffer, size_t length, int flags);
+    
+    int length = 0;
+    char* content;
+    content =  (char*) calloc(1, 10*1000*1000);
+
+    while(1) {
+	char ch = getchar();
+	if (ch == EOF) {
+	    break;
+	}
+	content[length] = ch;
+	length++;
+    }   
+    
+    Message* message = (Message*) calloc(1, sizeof(Message));
+    memset(message, 0, sizeof(Message));
+    message->op = htobe16(op);
+    message->shift = htobe16(n);
+    message->length = htobe64(length);
+    message->data = strdup(content);
+    message->checksum = checksum((char*)message,(unsigned) message->length-16);
+    printf(content);
+    free(content);
+    free(message->data);
+    free(message);
     return 0;
 }
 
 
 
-char* protocol(char* message, int op, int n, int checksum) {
-
-}
 
 unsigned short checksum(const char *buf, unsigned size) {
     unsigned long long sum = 0;
-    const unsigned long long *b = (unsigned long long *) buf;
+    //const unsigned long long *b = (unsigned long long *) buf;
 
     unsigned t1, t2;
     unsigned short t3, t4;
 
+    const unsigned long long *a = (unsigned long long *) buf;
+    for (int i = 0; i <= 1; i++) {
+	unsigned long long *s = *a++;
+        sum += s;
+	if (sum < s) sum++;
+    }
+    
+    const unsigned long long *b = (unsigned long long *) (((Message *)buf)->data);
     while (size >= sizeof(unsigned long long)) {
 	unsigned long long s = * b++;
 	sum += s;
